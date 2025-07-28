@@ -72,3 +72,26 @@ data_mta_art <- data_mta_art |>
 #| label: vis-d3-step-chart
 tt_mta_art(data = data_mta_art)
 ```
+
+# Post
+
+Here's my contribution to this week's #TidyTuesday data: MTA Permanent Art Catalog.
+
+New York City: Buildings of steel, subways filled with glass art
+
+⚙️Data transformation using {tidyverse}
+📈Plot using D3.js
+🔗Code and data links 👇
+
+#RStats #DataViz #tidyverse #r4ds
+
+---
+
+* Disclaimer: I'm still learning D3.js. So, the code could use some improvements.
+
+🧑‍💻Code: https://github.com/collinberke/berkeTidyTuesday/commit/f4104044ca87cc1b733eaa749293a17514296f27
+📊Data: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-22/readme.md
+
+Shoutout to @karaman.is for suggesting this data and @jonthegeek.com for curating.
+
+
