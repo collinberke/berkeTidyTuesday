@@ -1,0 +1,6 @@
+dependencies:
+ - name: d3
+   version: 7.9.0
+   src: "htmlwidgets/lib/d3-7.9.0"
+   script: d3.v7.min.js
+   stylesheet: tt_mta_art.css

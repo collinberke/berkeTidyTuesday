@@ -1,0 +1,35 @@
+.chart-title {
+  font-size: 24px;
+  font-weight: bold;
+  font-family: "Helvetica";
+  fill: white;
+}
+
+.chart-subtitle {
+  font-size: 18px;
+  font-family: "Helvetica";
+  fill: white;
+}
+
+.chart-caption {
+  font-size: 12px;
+  font-family: "Helvetica";
+  fill: white;
+}
+
+.axis {
+  font-family: "Helvetica";
+  font-size: 14px;
+  color: white;
+}
+
+.axis-label {
+  font-family: "Helvetica";
+  font-size: 16px;
+  fill: white;
+}
+
+text.plot-label {
+  font-family: "Helvetica";
+  fill: white
+}

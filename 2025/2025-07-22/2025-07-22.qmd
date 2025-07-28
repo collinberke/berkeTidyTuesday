@@ -1,0 +1,74 @@
+
+```{r}
+#| label: setup
+library(tidyverse)
+library(tidytuesdayR)
+library(skimr)
+```
+
+```{r}
+#| label: import-data
+data_mta <- tt_load('2025-07-22')
+
+data_mta_art <- data_mta$mta_art
+data_station_lines <- data_mta$station_lines
+```
+
+```{r}
+#| label: explore-data-mta-art
+glimpse(data_mta_art)
+skim(data_mta_art)
+range(data_mta_art$art_date)
+
+# What are the unique categories for `art_material`?
+unique(data_mta_art$art_material)
+
+# What are the top-5 materials
+data_mta_art |>
+  count(art_material, sort = TRUE)
+```
+
+```{r}
+#| label: explore-data-station-lines
+glimpse(data_station_lines)
+skim(data_station_lines)
+```
+
+What about steel, glass, and ceramic?
+
+```{r}
+#| label: trnsfm-data
+data_mta_art <- data_mta_art |>
+  mutate(
+    art_material = str_to_lower(art_material),
+    bronze = ifelse(str_detect(art_material, "bronze"), 1, 0),
+    ceramic = ifelse(str_detect(art_material, "ceramic"), 1, 0),
+    glass = ifelse(str_detect(art_material, "glass"), 1, 0),
+    steel = ifelse(str_detect(art_material, "steel"), 1, 0),
+    stone = ifelse(str_detect(art_material, "stone"), 1, 0),
+  ) |>
+  group_by(art_date) |>
+  summarise(
+    bronze = sum(bronze),
+    ceramic = sum(ceramic),
+    glass = sum(glass),
+    steel = sum(steel),
+    stone = sum(stone)
+  ) |>
+  mutate(
+    bronze = cumsum(bronze),
+    ceramic = cumsum(ceramic),
+    glass = cumsum(glass),
+    steel = cumsum(steel),
+    stone = cumsum(stone)
+  ) |>
+  complete(art_date = 1980:2023) |>
+  fill(bronze:stone) |>
+  pivot_longer(cols = bronze:stone, values_to = "count") |>
+  arrange(name, art_date)
+```
+
+```{r}
+#| label: vis-d3-step-chart
+tt_mta_art(data = data_mta_art)
+```
