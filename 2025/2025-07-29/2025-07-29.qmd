@@ -1,0 +1,256 @@
+```{r}
+#| label: setup
+library(tidyverse)
+library(tidytuesdayR)
+library(here)
+library(skimr)
+library(glue)
+library(scales)
+library(ggnewscale)
+library(ggtext)
+library(ggrepel)
+library(sysfonts)
+library(showtext)
+library(fontawesome)
+```
+
+```{r}
+#| label: setup-plot-fonts
+font_add(
+  family = "Font Awesome 7 Brands",
+  regular = "~/packages/berkeBrand/Font Awesome 7 Brands-Regular-400.otf"
+)
+showtext_auto()
+showtext_opts(dpi = 300)
+
+font_add_google("Montserrat", "monts")
+```
+
+```{r}
+#| label: import-data
+data_netflix <- tt_load('2025-07-29')
+
+data_netflix_movies <- data_netflix$movies
+data_netflix_shows <- data_netflix$shows
+```
+
+```{r}
+#| label: explore-data
+# Movies
+glimpse(data_netflix_movies)
+skim(data_netflix_shows)
+
+# Shows
+glimpse(data_netflix_shows)
+skim(data_netflix_shows)
+```
+
+```{r}
+#| label: explore-unique-values
+unique(data_netflix_shows$title)
+```
+
+Are there any duplicate titles?
+
+```{r}
+#| label: explore-duplicate-titles
+# Duplicate titles: yes
+data_netflix_shows |>
+  filter(available_globally == "No") |>
+  count(title, sort = TRUE) |>
+  print(n = 100)
+
+# Are duplicate titles due to a re-release? Or, some other reason?
+# I think the presence of duplicate titles is due to the reports
+# used to create the data, most titles are repeated four times.
+data_netflix_shows |>
+  filter(available_globally == "Yes") |>
+  group_by(title, release_date) |>
+  count(sort = TRUE) |>
+  print(n = 100)
+```
+
+Visualization ideas:
+
+* Since this is a two-year snapshot, I don't think we can use release date for anything useful.
+* What shows do the best in terms of reach and engagement?
+
+# Data transformation
+
+```{r}
+#| label: trsfm-data
+data_netflix_shows_total <- data_netflix_shows |>
+  filter(available_globally == "Yes") |>
+  group_by(title) |>
+  summarise(
+    total_hours_viewed = sum(hours_viewed),
+    total_views = sum(views)
+  ) |>
+  mutate(title = str_remove(title, " \\/\\/.*")) |>
+  arrange(desc(total_views))
+
+print(data_netflix_shows_total, n = 100)
+```
+
+```{r}
+#| label: summ-avgs-quartiles
+data_netflix_shows_total |>
+  summarise(
+    mean_hours_viewed = mean(total_hours_viewed),
+    mean_views = mean(total_views)
+  )
+
+quant_hours <- quantile(
+  data_netflix_shows_total$total_hours_viewed,
+  c(.1, .5, .75, .95, .9985)
+)
+
+quant_views <- quantile(
+  data_netflix_shows_total$total_views,
+  c(.1, .5, .75, .95, .99, .9985)
+)
+```
+
+```{r}
+#| label: vis-text
+plot_title <- glue(
+  "<span>Competing with sleep: The</span>",
+  "<span style='color: #db0000'>NETFLIX</span>",
+  "<span>shows driving reach and enagement</span>",
+  .sep = " "
+)
+
+plot_subtitle <- "A snapshot from late 2023 to the first half of 2025"
+
+# Setup socials for caption
+bsky_icon <- "&#xe671"
+bsky_username <- "collinberke.bsky.social"
+github_icon <- "&#xf09b"
+github_username <- "collinberke"
+linkedin_icon <- "&#xf08c"
+linkedin_username <- "collinberke"
+
+socials <- glue(
+  "<span style='font-family:\"Font Awesome 7 Brands\"; color: #ffffff'>{bsky_icon};</span>",
+  "<span style='color: #ffffff'>{bsky_username}</span>",
+  "<span style='font-family:\"Font Awesome 7 Brands\"; color: #ffffff'>{github_icon};</span>",
+  "<span style='color: #ffffff'>{github_username}</span>",
+  "<span style='font-family:\"Font Awesome 7 Brands\"; color: #ffffff'>{linkedin_icon};</span>",
+  "<span style='color: #ffffff'>{linkedin_username}</span>",
+  .sep = " "
+)
+
+plot_caption <- glue(
+  "<br>Source: Netflix Engagement Reports | #TidyTuesday: 2025-07-29<br>",
+  socials
+)
+```
+
+```{r}
+#| label: vis-views-to-time-watched
+ggplot() +
+  geom_point(
+    data = data_netflix_shows_total,
+    aes(total_hours_viewed, total_views, color = total_views),
+    size = 3,
+    alpha = .5
+  ) +
+  scale_colour_gradient(low = "#CCCCCC", high = "#db0000") +
+  new_scale_color() +
+  geom_point(
+    data = data_netflix_shows_total,
+    aes(total_hours_viewed, total_views, color = total_hours_viewed),
+    size = 3,
+    alpha = .5
+  ) +
+  scale_colour_gradient(low = "#CCCCCC", high = "#db0000") +
+  geom_text_repel(
+    data = data_netflix_shows_total |>
+      filter(
+        total_hours_viewed >= quant_hours[["99.85%"]] |
+          total_views >= quant_views[["99.85%"]],
+      ),
+    aes(total_hours_viewed, total_views, label = title),
+    size = 3.5,
+    color = "white",
+    force_pull = 0,
+    segment.curvature = -1e-20,
+    arrow = arrow(length = unit(0.01, "npc")),
+    hjust = -.8,
+    nudge_y = 7000000
+  ) +
+  scale_x_continuous(
+    limits = c(0, NA),
+    labels = label_number(scale_cut = cut_short_scale()),
+    expand = expansion(mult = c(0, .2))
+  ) +
+  scale_y_continuous(
+    limits = c(0, NA),
+    labels = label_number(scale_cut = cut_short_scale()),
+    expand = expansion(mult = c(0, .1))
+  ) +
+  labs(
+    x = "Total Hours Viewed",
+    y = "Total Views",
+    title = plot_title,
+    subtitle = plot_subtitle,
+    caption = plot_caption
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(colour = "#ffffff", face = "bold"),
+    panel.grid = element_blank(),
+    plot.background = element_rect(fill = "black"),
+    legend.position = "none",
+    axis.text = element_text(color = "#ffffff"),
+    axis.title = element_text(color = "#ffffff", size = 10),
+    plot.title = element_textbox_simple(color = "#ffffff", size = 20),
+    plot.subtitle = element_text(color = "#ffffff", size = 16),
+    plot.caption = element_textbox_simple(halign = 1, colour = "#ffffff")
+  )
+```
+
+```{r}
+#| label: vis-output
+ggsave(
+  filename = here("2025/2025-07-29/vis_netflix-what-we-watch-shows.png"),
+  width = 12,
+  height = 10
+)
+```
+
+# Post
+
+Here's my contribution to this week's #TidyTuesday data: What have we been watching on Netflix?
+
+Competing with sleep: The NETFLIX shows driving reach and engagement
+
+📈Plot using #ggplot2
+🏷️Labels with help from {ggrepel}
+⚖️Scale text formatting using {scales}
+🔤Fonts and icons with help from {sysfonts}, {showtext}, and {fontawesome}
+🔗Code and data links 👇
+
+#RStats #DataViz #tidyverse #r4ds 1/4
+
+---
+
+🧑‍💻Code:
+📊Data: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-29/readme.md
+
+Shoutout to @jenrichmondphd.bsky.social for curating this week's data. Also, thanks to @nrennie.bsky.social and @albertrapp.bsky.social for their blogs about using icons and fonts in #ggplot2 plots. Links to these to follow.
+
+2/4
+
+---
+
+🔗 Adding social media icons to charts with {ggplot2}: https://nrennie.rbind.io/blog/adding-social-media-icons-ggplot2/
+🔗 4 Ways to use colors in ggplot more efficiently: https://albert-rapp.de/posts/ggplot2-tips/07_four_ways_colors_more_efficiently/07_four_ways_colors_more_efficiently.html
+
+3/4
+
+---
+
+And yes, Netflix's competitor is sleep: https://www.theguardian.com/technology/2017/apr/18/netflix-competitor-sleep-uber-facebook
+
+4/4
